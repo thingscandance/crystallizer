@@ -131,7 +131,7 @@
 
   .main-grid {
     display: grid;
-    grid-template-columns: 1fr 360px;
+    grid-template-columns: 1fr 520px;
     height: calc(100vh - 160px);
   }
 
@@ -410,7 +410,7 @@
     padding: 0.8rem;
     border: 1px solid var(--border);
     min-height: 0;
-    max-height: 120px;
+    max-height: 180px;
   }
 
   .text-panel.herb-panel { border-color: rgba(77,255,42,0.15); }
@@ -444,7 +444,7 @@
   .constellation-canvas {
     display: block;
     width: 100%;
-    height: 90px;
+    height: 160px;
   }
 
   .crystal-label {
@@ -1333,7 +1333,7 @@ function initConCanvas() {
   if (!c) return;
   const zone = document.getElementById('crystalZone');
   conW = c.width = zone.clientWidth || 340;
-  conH = c.height = 90;
+  conH = c.height = 160;
   conCtx = c.getContext('2d');
 }
 
