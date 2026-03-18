@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Кристаллизатор / Crystallizer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+
+  :root {
+    --herb: #1a5c0a;
+    --herb-bright: #4dff2a;
+    --herb-mid: #2db81a;
+    --herb-glow: rgba(77,255,42,0.15);
+    --patent: #0a0a2e;
+    --patent-bright: #4477ff;
+    --patent-mid: #2255dd;
+    --patent-glow: rgba(68,119,255,0.15);
+    --tension: #ff6600;
+    --tension-bright: #ff9900;
+    --crystallized: #ffd700;
+    --crystal-glow: rgba(255,215,0,0.3);
+    --bg: #0d0d0d;
+    --bg2: #111118;
+    --text: #e8e8e0;
+    --text-dim: rgba(232,232,224,0.4);
+    --border: rgba(255,255,255,0.08);
+    --font-herb: 'IM Fell English', serif;
+    --font-patent: 'Space Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    font-family: var(--font-herb);
+  }
+
+  /* Tabs */
+  .tab-bar {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    padding: 0 2rem;
+  }
+
+  .tab-btn {
+    font-family: var(--font-patent);
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 1rem 1.5rem;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    position: relative;
+    top: 1px;
+  }
+
+  .tab-btn.active {
+    color: var(--crystallized);
+    border-bottom-color: var(--crystallized);
+  }
+
+  .tab-btn:hover:not(.active) { color: var(--text); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ===================== TAB 1: VISUALIZER ===================== */
+  header {
+    padding: 2.5rem 3rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 2rem;
+    background: var(--bg2);
+  }
+
+  .title-block h1 {
+    font-family: var(--font-herb);
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    font-weight: normal;
+    font-style: italic;
+    line-height: 1.05;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  .title-block h1 em {
+    color: var(--crystallized);
+    font-style: italic;
+  }
+
+  .title-block .subtitle {
+    font-family: var(--font-patent);
+    font-size: 0.55rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-top: 0.6rem;
+  }
+
+  .legend {
+    display: flex;
+    gap: 1.5rem;
+    font-family: var(--font-patent);
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 0.8;
+  }
+
+  .legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    height: calc(100vh - 160px);
+  }
+
+  /* Canvas */
+  .canvas-area {
+    position: relative;
+    overflow: hidden;
+    background: #050508;
+    border-right: 1px solid var(--border);
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .canvas-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 40% 40% at 30% 50%, rgba(77,255,42,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 65% 45%, rgba(68,119,255,0.04) 0%, transparent 60%);
+  }
+
+  .tension-display {
+    position: absolute;
+    top: 1.5rem;
+    left: 1.5rem;
+    font-family: var(--font-patent);
+    font-size: 0.55rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .tension-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--tension-bright);
+    display: block;
+    line-height: 1;
+    margin-top: 0.3rem;
+    font-family: var(--font-patent);
+    text-shadow: 0 0 20px var(--tension);
+    transition: color 0.5s;
+  }
+
+  .tension-bar-wrap {
+    width: 80px;
+    height: 2px;
+    background: rgba(255,255,255,0.1);
+    margin-top: 0.5rem;
+    overflow: hidden;
+  }
+
+  .tension-bar-fill {
+    height: 100%;
+    background: var(--tension-bright);
+    box-shadow: 0 0 8px var(--tension);
+    transition: width 0.4s ease;
+  }
+
+  .canvas-status {
+    position: absolute;
+    bottom: 1.5rem;
+    left: 1.5rem;
+    font-family: var(--font-patent);
+    font-size: 0.5rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  /* Sidebar */
+  .sidebar {
+    background: var(--bg2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-inner {
+    padding: 1.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.6rem;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .sidebar-inner::-webkit-scrollbar { width: 2px; }
+  .sidebar-inner::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .section-label {
+    font-family: var(--font-patent);
+    font-size: 0.5rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 0.7rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Plant input */
+  .plant-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .plant-btn {
+    font-family: var(--font-herb);
+    font-style: italic;
+    font-size: 0.78rem;
+    padding: 0.35rem 0.7rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .plant-btn:hover, .plant-btn.active {
+    border-color: var(--herb-bright);
+    color: var(--herb-bright);
+    background: var(--herb-glow);
+    text-shadow: 0 0 8px var(--herb-bright);
+  }
+
+  /* Grammar stats */
+  .grammar-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem;
+  }
+
+  .stat-block {
+    padding: 0.8rem;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+  }
+
+  .stat-block.herb { border-color: rgba(77,255,42,0.2); }
+  .stat-block.patent { border-color: rgba(68,119,255,0.2); }
+
+  .stat-header {
+    font-family: var(--font-patent);
+    font-size: 0.48rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+  }
+
+  .stat-block.herb .stat-header { color: var(--herb-mid); }
+  .stat-block.patent .stat-header { color: var(--patent-bright); }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.35rem;
+  }
+
+  .stat-name {
+    font-family: var(--font-patent);
+    font-size: 0.5rem;
+    color: var(--text-dim);
+  }
+
+  .stat-bar-wrap {
+    width: 60px;
+    height: 2px;
+    background: rgba(255,255,255,0.08);
+    overflow: hidden;
+  }
+
+  .stat-bar {
+    height: 100%;
+    transition: width 0.6s ease;
+  }
+
+  .herb .stat-bar { background: var(--herb-bright); box-shadow: 0 0 4px var(--herb-bright); }
+  .patent .stat-bar { background: var(--patent-bright); box-shadow: 0 0 4px var(--patent-bright); }
+
+  /* Sliders */
+  .slider-group { margin-bottom: 0; }
+
+  .slider-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .slider-name {
+    font-size: 0.75rem;
+  }
+
+  .slider-name.herb-name {
+    font-family: var(--font-herb);
+    font-style: italic;
+    color: var(--herb-mid);
+  }
+
+  .slider-name.patent-name {
+    font-family: var(--font-patent);
+    font-size: 0.6rem;
+    color: var(--patent-bright);
+    letter-spacing: 0.05em;
+  }
+
+  .slider-num {
+    font-family: var(--font-patent);
+    font-size: 0.6rem;
+    color: var(--text-dim);
+  }
+
+  input[type="range"] {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 2px;
+    outline: none;
+    border-radius: 0;
+    cursor: pointer;
+  }
+
+  .range-herb {
+    background: linear-gradient(to right, #1a3a0a, var(--herb-bright));
+  }
+
+  .range-herb::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--herb-bright);
+    box-shadow: 0 0 8px var(--herb-bright);
+    cursor: pointer;
+  }
+
+  .range-patent {
+    background: linear-gradient(to right, #0a0a2e, var(--patent-bright));
+  }
+
+  .range-patent::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--patent-bright);
+    box-shadow: 0 0 8px var(--patent-bright);
+    cursor: pointer;
+  }
+
+  /* Text panels */
+  .text-panels {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .text-panel {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.8rem;
+    border: 1px solid var(--border);
+    min-height: 0;
+    max-height: 120px;
+  }
+
+  .text-panel.herb-panel { border-color: rgba(77,255,42,0.15); }
+  .text-panel.patent-panel { border-color: rgba(68,119,255,0.15); }
+  .text-panel::-webkit-scrollbar { width: 2px; }
+  .text-panel::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .text-herb {
+    font-family: var(--font-herb);
+    font-style: italic;
+    font-size: 0.75rem;
+    line-height: 1.6;
+    color: rgba(77,255,42,0.75);
+  }
+
+  .text-patent {
+    font-family: var(--font-patent);
+    font-size: 0.55rem;
+    line-height: 1.6;
+    color: rgba(68,119,255,0.8);
+  }
+
+  /* Constellation output */
+  .constellation-zone {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255,215,0,0.15);
+    background: #020206;
+  }
+
+  .constellation-canvas {
+    display: block;
+    width: 100%;
+    height: 90px;
+  }
+
+  .crystal-label {
+    font-family: var(--font-patent);
+    font-size: 0.48rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 0.4rem 0.8rem 0;
+  }
+
+  .crystal-text {
+    font-family: var(--font-herb);
+    font-style: italic;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--crystallized);
+    min-height: 2rem;
+    text-shadow: 0 0 10px rgba(255,215,0,0.3);
+    transition: opacity 0.8s;
+    padding: 0.4rem 0.8rem 0.8rem;
+    letter-spacing: 0.01em;
+  }
+
+  .crystallize-btn {
+    font-family: var(--font-patent);
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.8rem 1.2rem;
+    background: transparent;
+    border: 1px solid rgba(255,215,0,0.3);
+    color: rgba(255,215,0,0.6);
+    cursor: pointer;
+    transition: all 0.3s;
+    width: 100%;
+    margin-top: 0.6rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .crystallize-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,215,0,0.08);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s ease;
+    z-index: 0;
+  }
+
+  .crystallize-btn:hover::before { transform: scaleX(1); }
+  .crystallize-btn:hover { color: var(--crystallized); border-color: var(--crystallized); }
+  .crystallize-btn span { position: relative; z-index: 1; }
+  .crystallize-btn:disabled { opacity: 0.2; cursor: not-allowed; }
+
+  /* ===================== TAB 2: ABOUT ===================== */
+  .about-page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 4rem 3rem;
+  }
+
+  .about-hero {
+    margin-bottom: 4rem;
+    padding-bottom: 3rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .about-hero h2 {
+    font-family: var(--font-herb);
+    font-style: italic;
+    font-size: clamp(2rem, 5vw, 4rem);
+    font-weight: normal;
+    color: var(--text);
+    line-height: 1.1;
+    margin-bottom: 1rem;
+  }
+
+  .about-hero h2 em { color: var(--crystallized); }
+
+  .about-hero .lead {
+    font-family: var(--font-herb);
+    font-style: italic;
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: rgba(232,232,224,0.7);
+    max-width: 600px;
+  }
+
+  .about-section {
+    margin-bottom: 3rem;
+  }
+
+  .about-section h3 {
+    font-family: var(--font-patent);
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--crystallized);
+    margin-bottom: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .about-section h3::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255,215,0,0.15);
+  }
+
+  .about-section p {
+    font-family: var(--font-herb);
+    font-size: 0.95rem;
+    line-height: 1.8;
+    color: rgba(232,232,224,0.75);
+    margin-bottom: 1rem;
+  }
+
+  .about-section p strong {
+    color: var(--text);
+    font-style: italic;
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin: 1.5rem 0;
+  }
+
+  .ontology-block {
+    padding: 1.2rem;
+    border: 1px solid var(--border);
+  }
+
+  .ontology-block.herb-block { border-color: rgba(77,255,42,0.2); }
+  .ontology-block.patent-block { border-color: rgba(68,119,255,0.2); }
+
+  .ontology-block h4 {
+    font-size: 0.85rem;
+    font-weight: normal;
+    margin-bottom: 0.8rem;
+  }
+
+  .herb-block h4 {
+    font-family: var(--font-herb);
+    font-style: italic;
+    color: var(--herb-bright);
+    text-shadow: 0 0 8px var(--herb-bright);
+  }
+
+  .patent-block h4 {
+    font-family: var(--font-patent);
+    font-size: 0.7rem;
+    color: var(--patent-bright);
+    text-shadow: 0 0 8px var(--patent-bright);
+  }
+
+  .ontology-block ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .ontology-block ul li {
+    font-family: var(--font-patent);
+    font-size: 0.55rem;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    padding: 0.3rem 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .ontology-block ul li::before {
+    content: '→';
+    opacity: 0.4;
+  }
+
+  .corpus-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-patent);
+    font-size: 0.55rem;
+    letter-spacing: 0.05em;
+    margin: 1rem 0;
+  }
+
+  .corpus-table th {
+    text-align: left;
+    padding: 0.6rem 0.8rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: normal;
+  }
+
+  .corpus-table td {
+    padding: 0.6rem 0.8rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: rgba(232,232,224,0.6);
+  }
+
+  .corpus-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .tag-herb { color: var(--herb-mid); }
+  .tag-patent { color: var(--patent-bright); }
+
+  .grammar-comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+  }
+
+  .gram-col h5 {
+    font-family: var(--font-patent);
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.8rem;
+  }
+
+  .herb-col h5 { color: var(--herb-mid); }
+  .patent-col h5 { color: var(--patent-bright); }
+
+  .gram-col ul {
+    list-style: none;
+  }
+
+  .gram-col ul li {
+    font-family: var(--font-herb);
+    font-style: italic;
+    font-size: 0.8rem;
+    color: rgba(232,232,224,0.6);
+    padding: 0.25rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .patent-col ul li {
+    font-family: var(--font-patent);
+    font-style: normal;
+    font-size: 0.6rem;
+    letter-spacing: 0.03em;
+  }
+
+  .refs {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .ref-item {
+    font-family: var(--font-patent);
+    font-size: 0.55rem;
+    line-height: 1.5;
+    color: var(--text-dim);
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 1rem;
+  }
+
+  .ref-num {
+    color: var(--crystallized);
+    flex-shrink: 0;
+  }
+
+  .disclaimer {
+    background: rgba(255,102,0,0.05);
+    border: 1px solid rgba(255,102,0,0.2);
+    padding: 1.2rem;
+    margin-top: 2rem;
+  }
+
+  .disclaimer p {
+    font-family: var(--font-patent);
+    font-size: 0.55rem;
+    line-height: 1.6;
+    color: rgba(255,153,0,0.7);
+    margin: 0;
+  }
+
+  @media (max-width: 800px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .canvas-area { height: 55vw; min-height: 280px; }
+    .two-col, .grammar-comparison, .grammar-stats { grid-template-columns: 1fr; }
+    header { padding: 1.5rem; flex-direction: column; align-items: flex-start; }
+    .about-page { padding: 2rem 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('viz', this)">— визуализатор</button>
+  <button class="tab-btn" onclick="switchTab('about', this)">— о проекте</button>
+</div>
+
+<!-- TAB 1: VISUALIZER -->
+<div class="tab-content active" id="tab-viz">
+
+<header>
+  <div class="title-block">
+    <h1><em>Кристаллизатор</em></h1>
+    <div class="subtitle">semantic overload — grammar conflict — ontological crystallization</div>
+  </div>
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#4dff2a; box-shadow: 0 0 6px #4dff2a"></div>
+      <span style="font-family:var(--font-herb);font-style:italic;font-size:0.78rem;color:rgba(77,255,42,0.8)">травник</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#4477ff; box-shadow: 0 0 6px #4477ff"></div>
+      <span style="font-family:var(--font-patent);font-size:0.6rem;color:rgba(68,119,255,0.8)">PATENT</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#ffd700; box-shadow: 0 0 6px #ffd700"></div>
+      <span style="font-family:var(--font-patent);font-size:0.6rem;color:rgba(255,215,0,0.8)">КРИСТАЛЛ</span>
+    </div>
+  </div>
+</header>
+
+<div class="main-grid">
+
+  <div class="canvas-area">
+    <canvas id="field"></canvas>
+    <div class="canvas-overlay"></div>
+    <div class="tension-display">
+      <span>напряжение поля</span>
+      <span class="tension-value" id="tensionValue">0</span>
+      <div class="tension-bar-wrap">
+        <div class="tension-bar-fill" id="tensionFill" style="width:0%"></div>
+      </div>
+    </div>
+    <div class="canvas-status" id="canvasStatus">инициализация...</div>
+  </div>
+
+  <div class="sidebar">
+    <div class="sidebar-inner">
+
+      <div>
+        <div class="section-label">растение</div>
+        <div class="plant-grid" id="plantGrid">
+          <button class="plant-btn active" onclick="selectPlant('ромашка',this)">ромашка</button>
+          <button class="plant-btn" onclick="selectPlant('валериана',this)">валериана</button>
+          <button class="plant-btn" onclick="selectPlant('белладонна',this)">белладонна</button>
+          <button class="plant-btn" onclick="selectPlant('мята',this)">мята</button>
+          <button class="plant-btn" onclick="selectPlant('полынь',this)">полынь</button>
+          <button class="plant-btn" onclick="selectPlant('окопник',this)">окопник</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">грамматический профиль</div>
+        <div class="grammar-stats">
+          <div class="stat-block herb">
+            <div class="stat-header">травник</div>
+            <div class="stat-row">
+              <span class="stat-name">прилагат.</span>
+              <div class="stat-bar-wrap"><div class="stat-bar herb" id="h-adj" style="width:75%"></div></div>
+            </div>
+            <div class="stat-row">
+              <span class="stat-name">глаголы</span>
+              <div class="stat-bar-wrap"><div class="stat-bar herb" id="h-verb" style="width:60%"></div></div>
+            </div>
+            <div class="stat-row">
+              <span class="stat-name">аналогия</span>
+              <div class="stat-bar-wrap"><div class="stat-bar herb" id="h-anal" style="width:85%"></div></div>
+            </div>
+            <div class="stat-row">
+              <span class="stat-name">числа</span>
+              <div class="stat-bar-wrap"><div class="stat-bar herb" id="h-num" style="width:8%"></div></div>
+            </div>
+          </div>
+          <div class="stat-block patent">
+            <div class="stat-header">патент</div>
+            <div class="stat-row">
+              <span class="stat-name">числа</span>
+              <div class="stat-bar-wrap"><div class="stat-bar patent" id="p-num" style="width:90%"></div></div>
+            </div>
+            <div class="stat-row">
+              <span class="stat-name">пассив</span>
+              <div class="stat-bar-wrap"><div class="stat-bar patent" id="p-pass" style="width:80%"></div></div>
+            </div>
+            <div class="stat-row">
+              <span class="stat-name">аббревиат.</span>
+              <div class="stat-bar-wrap"><div class="stat-bar patent" id="p-abbr" style="width:70%"></div></div>
+            </div>
+            <div class="stat-row">
+              <span class="stat-name">аналогия</span>
+              <div class="stat-bar-wrap"><div class="stat-bar patent" id="p-anal" style="width:5%"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">вес онтологий</div>
+        <div class="slider-group">
+          <div class="slider-row">
+            <span class="slider-name herb-name">травник</span>
+            <span class="slider-num" id="herbVal">70</span>
+          </div>
+          <input type="range" class="range-herb" id="herbSlider" min="0" max="100" value="70">
+        </div>
+        <div style="height:1rem"></div>
+        <div class="slider-group">
+          <div class="slider-row">
+            <span class="slider-name patent-name">PATENT</span>
+            <span class="slider-num" id="patentVal">40</span>
+          </div>
+          <input type="range" class="range-patent" id="patentSlider" min="0" max="100" value="40">
+        </div>
+      </div>
+
+      <div class="text-panels">
+        <div class="section-label">тексты</div>
+        <div class="text-panel herb-panel">
+          <div class="text-herb" id="herbText">Ромашка собирается на рассвете, когда роса ещё лежит на лепестках и запах её острее всего...</div>
+        </div>
+        <div class="text-panel patent-panel">
+          <div class="text-patent" id="patentText">APIGENIN (4',5,7-TRIHYDROXYFLAVONE) — CAS 520-36-5. Active compound isolated from Matricaria chamomilla L...</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">кристаллизация / созвездие</div>
+        <div class="constellation-zone" id="crystalZone">
+          <canvas class="constellation-canvas" id="constellationCanvas"></canvas>
+          <div class="crystal-label">имя созвездия</div>
+          <div class="crystal-text" id="crystalText">—</div>
+        </div>
+        <button class="crystallize-btn" id="crystallizeBtn" onclick="crystallize()">
+          <span>→ соединить звёзды</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</div><!-- /tab-viz -->
+
+<!-- TAB 2: ABOUT -->
+<div class="tab-content" id="tab-about">
+<div class="about-page">
+
+  <div class="about-hero">
+    <h2><em>Кристаллизатор</em></h2>
+    <p class="lead">
+      Два корпуса знания об одном объекте. Одновременно активны. Не могут разрешить противоречие.
+      Из этого неразрешения кристаллизуется нечто что не было предусмотрено ни одним из них.
+    </p>
+  </div>
+
+  <div class="about-section">
+    <h3>Что здесь происходит</h3>
+    <p>
+      Травник знает растение через соприсутствие. Он описывает запах на рассвете, цвет стебля в тени,
+      как оно меняется от сезона к сезону. Его синтаксис: длинные цепочки качеств без иерархии,
+      аналогия как аргумент, тело как инструмент знания. Источник — опыт встречи.
+    </p>
+    <p>
+      Патент знает то же растение через изоляцию. Молекула отделена от контекста, концентрация
+      стандартизирована, механизм действия отделён от ощущения действия. Его синтаксис:
+      пассивный залог, номинализации, число как единственный аргумент. Источник — воспроизводимый эксперимент.
+    </p>
+    <p>
+      Это не два мнения об одном объекте. Это две <strong>онтологии</strong> — два разных способа
+      производить пространство знания. Они несовместимы не на уровне содержания а на уровне
+      того что вообще считается знанием.
+    </p>
+    <p>
+      По Симандону технический объект несёт в себе «кристаллизованные жесты» тех кто его создавал —
+      конкретные решения, предположения, слепые пятна. Критика снаружи не слышит этих жестов.
+      Продуктивный подход: понять объект через его внутреннюю логику становления — и через
+      столкновение с другой логикой обнаружить то что ни одна из них не захватила.
+    </p>
+  </div>
+
+  <div class="about-section">
+    <h3>Две онтологии знания</h3>
+    <div class="two-col">
+      <div class="ontology-block herb-block">
+        <h4>травник</h4>
+        <ul>
+          <li>знание через соприсутствие</li>
+          <li>качество без иерархии</li>
+          <li>сезонность как ось времени</li>
+          <li>тело как инструмент</li>
+          <li>аналогия как метод</li>
+          <li>нет собственности</li>
+          <li>без контроля воспроизводимости</li>
+        </ul>
+      </div>
+      <div class="ontology-block patent-block">
+        <h4>PATENT</h4>
+        <ul>
+          <li>знание через изоляцию</li>
+          <li>причинность как единственная связь</li>
+          <li>воспроизводимость как ценность</li>
+          <li>стандартизация контекста</li>
+          <li>число как единственный аргумент</li>
+          <li>собственность на молекулу</li>
+          <li>регуляция как архитектура</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="about-section">
+    <h3>Грамматика как онтология</h3>
+    <p>
+      Визуализация работает с грамматическими паттернами а не с семантикой.
+      Обе стороны говорят об одном растении — но их синтаксические структуры
+      несовместимы на уровне самой формы речи. Грамматика это не оболочка содержания —
+      это способ производить мир.
+    </p>
+    <div class="grammar-comparison">
+      <div class="gram-col herb-col">
+        <h5>травник — паттерны</h5>
+        <ul>
+          <li>«мягкий, как летний вечер»</li>
+          <li>«говорят старики, что...»</li>
+          <li>«там где земля помнит»</li>
+          <li>длинные перечисления через «и»</li>
+          <li>глаголы настоящего времени</li>
+          <li>безличные конструкции</li>
+        </ul>
+      </div>
+      <div class="gram-col patent-col">
+        <h5>PATENT — patterns</h5>
+        <ul>
+          <li>CAS 520-36-5</li>
+          <li>demonstrated (p&lt;0.001)</li>
+          <li>isolated from / derived from</li>
+          <li>Bioavailability: 29–45%</li>
+          <li>пассивный залог</li>
+          <li>номинализации</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="about-section">
+    <h3>Метафора: карта созвездий</h3>
+    <p>
+      Звёзды существовали в поле задолго до того как кто-то провёл между ними линии.
+      Они были отдельными точками без связи. Потом наблюдатель провёл линии —
+      и обнаружил фигуру: Медведицу, Орион, Скорпиона.
+      <strong>Медведицы не было в звёздах.</strong> Она кристаллизовалась из акта соединения.
+    </p>
+    <p>
+      Это симандоновская операция: затравка — намерение наблюдателя —
+      запускает кристаллизацию из поля напряжений. Линии не создают звёзды.
+      Они обнаруживают конфигурацию которая была <em>возможна</em> в поле —
+      и которой не было ни в одной звезде по отдельности.
+    </p>
+    <p>
+      В «Кристаллизаторе»: зелёные звёзды приходят из корпуса травника,
+      синие — из корпуса патента. Золотые линии принадлежат не одному и не другому —
+      они возникают из акта соединения несовместимых точек. Имя созвездия это то
+      что не было ни в травнике ни в патенте, но проявилось из их столкновения.
+    </p>
+    <p>
+      Не критика одного корпуса другим. Не синтез. Обнаружение того что давило
+      изнутри обоих и не могло выйти ни через один из них по отдельности.
+    </p>
+  </div>
+
+  <div class="about-section">
+    <h3>Честность о прототипе</h3>
+    <p>
+      Тексты травников стилизованы под жанр — они написаны в духе корпуса
+      (европейские травники XVII–XIX вв.) но не взяты дословно из конкретных источников.
+      Молекулярные данные реальные: CAS номера, механизмы действия, регуляторный статус.
+    </p>
+    <p>
+      Созвездия — имена кристаллизаций — написаны вручную. Это интерпретация места
+      несовместимости двух онтологий, не алгоритмическая генерация. Это важно назвать:
+      то что здесь происходит это одна онтология читающая конфликт двух корпусов.
+      Настоящая версия требует реального столкновения в реальном времени — без
+      интерпретатора который знает заранее где несовместимость.
+    </p>
+    <table class="corpus-table">
+      <tr>
+        <th>корпус</th>
+        <th>источники для следующей версии</th>
+        <th>статус</th>
+      </tr>
+      <tr>
+        <td class="tag-herb">травники</td>
+        <td>европейские травники 1500–1850, открытые архивы</td>
+        <td>открытый доступ</td>
+      </tr>
+      <tr>
+        <td class="tag-patent">патенты</td>
+        <td>USPTO, EPO — поиск по молекуле</td>
+        <td>открытый доступ</td>
+      </tr>
+      <tr>
+        <td class="tag-herb">другие онтологии</td>
+        <td>аборигенные ботанические знания — только с согласия сообществ</td>
+        <td>требует согласования</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="about-section">
+    <h3>Следующий шаг</h3>
+    <p>
+      Реальные корпуса. Грамматическая экстракция через синтаксический анализ
+      (частотность частей речи, длина предложений, соотношение пассива к активу,
+      плотность числовых данных). Кристаллизация через языковую модель которая
+      получает оба фрагмента об одном растении с инструкцией:
+      <em>удержи противоречие без разрешения — и посмотри что из этого удержания выходит.</em>
+      Не оптимизация под связность. Намеренная пустота в которую входит поле.
+    </p>
+  </div>
+
+  <div class="disclaimer">
+    <p>
+      ВЕРСИЯ 0.1 — ПРОТОТИП. Тексты стилизованы, созвездия написаны вручную.
+      Следующая версия: реальные корпуса, грамматическая экстракция, кристаллизация
+      через языковую модель с инструкцией удерживать противоречие без разрешения.
+    </p>
+  </div>
+
+</div>
+</div><!-- /tab-about -->
+
+<script>
+// Tab switching
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ===================== CANVAS =====================
+const canvas = document.getElementById('field');
+const ctx = canvas.getContext('2d');
+const statusEl = document.getElementById('canvasStatus');
+const tensionVal = document.getElementById('tensionValue');
+const tensionFill = document.getElementById('tensionFill');
+
+let W, H, particles = [], time = 0;
+let herbWeight = 70, patentWeight = 40;
+let animFrame;
+
+const plantData = {
+  'ромашка': {
+    herb: 'Ромашка собирается на рассвете, когда роса ещё лежит на лепестках и запах её острее всего. Говорят старики, что цветок этот добр к телу усталому и к духу беспокойному. Настой её мягкий, как летний вечер. Пьют от тоски, от бессонницы, от живота что крутит. Растёт по краям полей, по обочинам, там где земля помнит ещё что была лугом.',
+    patent: 'APIGENIN (4\',5,7-TRIHYDROXYFLAVONE) — CAS 520-36-5. Isolated from Matricaria chamomilla L. Mechanism: partial agonist GABA-A receptor. Anxiolytic effect p&lt;0.001 (murine). Bioavailability 29–45% oral. Patent pending: sustained-release formulation US2024/0187823. Indication: GAD, 25–50mg/day. Shelf stability: 24mo, 15–25°C.',
+    grammar: { h:[75,60,85,8], p:[90,80,70,5] },
+    crystals: [
+      'поле помнит что было лугом. молекула не помнит ничего.',
+      'роса и концентрация: оба измеряют присутствие вещества в утреннем воздухе',
+      'беспокойный дух — GABA-A рецептор — одно и то же место разными именами',
+      'тоска: состояние для которого нет патента'
+    ]
+  },
+  'валериана': {
+    herb: 'Корень валерианы пахнет землёй и чем-то ещё — чем именно, не скажешь сразу. Копают осенью, когда лист уже пожелтел. Кошки чуют её за версту и идут на запах как завороженные. Старые знахари говорят: корень этот — мост между бодрствованием и сном, между тем что помним и тем что забываем ночью.',
+    patent: 'VALERENIC ACID — CAS 3569-10-6. Sesquiterpene acid from Valeriana officinalis. Allosteric modulator GABA-A (β3-subunit). RCT: reduced sleep latency 14.4 min vs placebo p=0.02. Isovaleric acid: odor profile. Standardized extract ≥0.8% valerenic acids. Contraindication: concurrent benzodiazepine. Schedule: uncontrolled EU.',
+    grammar: { h:[70,65,80,5], p:[85,75,65,8] },
+    crystals: [
+      'кошки знают о β3-субъединице то чего не написано ни в одном патенте',
+      'мост между бодрствованием и сном: аллостерический модулятор',
+      'то что забываем ночью: contraindication с бензодиазепинами',
+      '14.4 минуты — время между запахом земли и сном'
+    ]
+  },
+  'белладонна': {
+    herb: 'Белладонна — красивая женщина по-итальянски. Венецианки капали сок в глаза чтобы зрачки расширялись и делали взгляд томным. Ягоды чёрные, блестящие, сладкие на вкус. Не трогай. Всё растение — яд и лекарство одновременно, смотря сколько и зачем. Растёт в тени, у старых стен, там где влажно.',
+    patent: 'ATROPINE SULFATE — CAS 55-48-1. Anticholinergic, competitive antagonist muscarinic ACh receptors. LD50 rat oral: 750 mg/kg. Therapeutic index: narrow. Indications: bradycardia, organophosphate poisoning, mydriasis. Controlled Schedule III. Antidote: physostigmine. Storage: protected from light.',
+    grammar: { h:[80,55,90,3], p:[95,85,60,10] },
+    crystals: [
+      'томный взгляд / мидриаз: одно действие, два намерения',
+      'всё — яд и лекарство: narrow therapeutic index',
+      'растёт там где влажно — и там где Schedule III',
+      'красивая женщина которая требует антидота'
+    ]
+  },
+  'мята': {
+    herb: 'Мяту держат у порога чтобы злые не вошли. Запах её резкий, чистый, сбивает с толку. В жаркий день если потереть лист между пальцами — холод расходится по руке хотя ничего холодного нет. Чай из мяты пьют чтобы думалось яснее. Растёт быстро, захватывает пространство, не спрашивает разрешения.',
+    patent: 'L-MENTHOL — CAS 2216-51-5. Cyclic terpene alcohol. TRPM8 agonist (cold perception without Δtemperature). GRAS FDA. Topical analgesic, antispasmodic, flavoring. Global market: $793M (2023). Synthetic production via thymol hydrogenation. 847 active patents covering delivery formulations.',
+    grammar: { h:[65,70,75,4], p:[90,78,72,6] },
+    crystals: [
+      'холод без температуры: TRPM8 / у порога чтобы злые не вошли',
+      '847 патентов на то что растёт не спрашивая разрешения',
+      'думалось яснее: механизм неизвестен — GRAS status',
+      'захватывает пространство / global market $793M'
+    ]
+  },
+  'полынь': {
+    herb: 'Полынь горькая — для тех кто хочет забыть. Абсент из неё, и тоска из неё, и лечение от тоски — всё одно. Жгут на Ивана Купалу чтобы дым отогнал нечистое. Растёт у дорог, помнит всех кто прошёл. Запах её остаётся на руках дольше чем нужно.',
+    patent: 'THUJONE (α+β) — CAS 546-80-5. Monoterpene ketone, GABA-A antagonist, convulsant high dose. EU Reg 1334/2008: max 35 mg/kg alcoholic beverages. Artemisinin (Artemisia annua): antimalarial, Nobel 2015. Wormwood: Novel Food regulated. Contradictory CNS safety profile dose-dependent.',
+    grammar: { h:[72,68,88,6], p:[88,82,58,12] },
+    crystals: [
+      'забыть и вспомнить: GABA антагонист / жечь чтобы отогнать',
+      'max 35 mg/kg: регуляция того что растёт у дорог',
+      'запах остаётся дольше чем нужно: dose-dependent CNS',
+      'Нобелевская премия из того чем жгут нечистое'
+    ]
+  },
+  'окопник': {
+    herb: 'Окопник зарастил раны солдат в старых войнах — толкли корень и прикладывали. Говорят сростает кости если держать долго. Листья шершавые как кошачий язык. Корень уходит глубоко, глубже чем кажется снаружи. Его не выкопать полностью — всегда остаётся кусок и из него снова вырастает.',
+    patent: 'ALLANTOIN — CAS 97-59-6. Cell proliferation stimulant, wound healing. From Symphytum officinale. However: pyrrolizidine alkaloids (hepatotoxic PA) restrict internal use. EU max: 0.35 μg/day PA topical. ESCOP: external only. Allantoin synthetic (urea oxidation) preferred to avoid alkaloid contamination.',
+    grammar: { h:[68,72,82,4], p:[87,88,66,9] },
+    crystals: [
+      'сростает кости / стимулятор пролиферации: одно движение',
+      'корень всегда остаётся: pyrrolizidine — external use only',
+      'из него снова вырастает: синтетический аллантоин из мочевины',
+      'раны солдат / max 0.35 μg/day: разные масштабы одной заботы'
+    ]
+  }
+};
+
+let currentPlant = 'ромашка';
+let crystalIdx = 0;
+
+function selectPlant(name, btn) {
+  currentPlant = name;
+  crystalIdx = 0;
+  document.querySelectorAll('.plant-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const d = plantData[name];
+  document.getElementById('herbText').innerHTML = d.herb;
+  document.getElementById('patentText').innerHTML = d.patent;
+  document.getElementById('crystalText').textContent = '—';
+  updateGrammarStats(d.grammar);
+  resetParticles();
+}
+
+function updateGrammarStats(g) {
+  const ids = ['h-adj','h-verb','h-anal','h-num'];
+  g.h.forEach((v,i) => { const el = document.getElementById(ids[i]); if(el) el.style.width = v+'%'; });
+  const pid = ['p-num','p-pass','p-abbr','p-anal'];
+  g.p.forEach((v,i) => { const el = document.getElementById(pid[i]); if(el) el.style.width = v+'%'; });
+}
+
+function resize() {
+  const area = canvas.parentElement;
+  W = canvas.width = area.clientWidth;
+  H = canvas.height = area.clientHeight;
+  initParticles();
+}
+
+function initParticles() {
+  particles = [];
+  const n = Math.min(600, Math.floor(W * H / 2500));
+  for (let i = 0; i < n; i++) particles.push(makeParticle());
+}
+
+function resetParticles() {
+  particles = particles.map(p => ({ ...makeParticle(), x: p.x, y: p.y }));
+}
+
+function makeParticle() {
+  const hw = herbWeight, pw = patentWeight;
+  const type = Math.random() < hw/(hw+pw+0.001) ? 'herb' : 'patent';
+  return {
+    x: Math.random()*W, y: Math.random()*H,
+    vx: 0, vy: 0,
+    type,
+    size: type==='herb' ? 1.2+Math.random()*2 : 0.6+Math.random()*1.2,
+    age: 0,
+    maxAge: 180+Math.random()*280,
+    phase: Math.random()*Math.PI*2,
+    trail: []
+  };
+}
+
+function herbVel(x, y, t) {
+  const nx=x/W, ny=y/H;
+  const a = Math.sin(nx*4+t*0.25+1.2)*Math.cos(ny*3+t*0.18)*Math.PI*1.5;
+  const s = 0.35+Math.sin(nx*6+ny*5+t*0.08)*0.15;
+  return { vx: Math.cos(a)*s, vy: Math.sin(a+0.4)*s };
+}
+
+function patentVel(x, y, t) {
+  const cx=W*0.62, cy=H*0.44;
+  const dx=cx-x, dy=cy-y, d=Math.sqrt(dx*dx+dy*dy)+0.1;
+  const pull=Math.min(1, 180/d);
+  const spin=0.5+Math.sin(t*0.05)*0.2;
+  return { vx:(dx/d)*pull+(-dy/d)*spin, vy:(dy/d)*pull+(dx/d)*spin };
+}
+
+function drawFrame() {
+  ctx.fillStyle='rgba(5,5,8,0.18)';
+  ctx.fillRect(0,0,W,H);
+
+  const hw=herbWeight/100, pw=patentWeight/100;
+  const tot=hw+pw+0.001;
+  const t_blend=pw/tot;
+  const rawTension=Math.abs(hw-pw)*150+hw*pw*250;
+  const tension=Math.min(100,rawTension);
+
+  tensionVal.textContent=Math.round(tension);
+  tensionVal.style.textShadow=`0 0 ${20+tension/3}px ${tension>60?'#ff6600':'#ff9900'}`;
+  tensionFill.style.width=tension+'%';
+  tensionFill.style.background=tension>60?`linear-gradient(to right,#ff6600,#ff3300)`:`linear-gradient(to right,#ff9900,#ff6600)`;
+  tensionFill.style.boxShadow=`0 0 ${8+tension/5}px var(--tension)`;
+
+  // Draw particles
+  particles.forEach((p,i)=>{
+    p.age++;
+    if(p.age>p.maxAge){ particles[i]=makeParticle(); return; }
+
+    const hv=herbVel(p.x,p.y,time);
+    const pv=patentVel(p.x,p.y,time);
+    const noise=tension/600;
+
+    p.vx=p.vx*0.82+(hv.vx*(1-t_blend)+pv.vx*t_blend)*0.18+(Math.random()-0.5)*noise;
+    p.vy=p.vy*0.82+(hv.vy*(1-t_blend)+pv.vy*t_blend)*0.18+(Math.random()-0.5)*noise;
+
+    p.x+=p.vx; p.y+=p.vy;
+    if(p.x<-2)p.x=W+2; if(p.x>W+2)p.x=-2;
+    if(p.y<-2)p.y=H+2; if(p.y>H+2)p.y=-2;
+
+    const lr=p.age/p.maxAge;
+    const alpha=Math.sin(lr*Math.PI)*0.8;
+    const speed=Math.sqrt(p.vx*p.vx+p.vy*p.vy);
+
+    if(p.type==='herb'){
+      const r=Math.floor(30+speed*50), g2=Math.floor(180+speed*75);
+      ctx.strokeStyle=`rgba(${r},${g2},20,${alpha})`;
+      ctx.shadowColor='#4dff2a';
+      ctx.shadowBlur=speed>0.5?8:0;
+      ctx.lineWidth=p.size*0.7;
+      ctx.beginPath();
+      ctx.moveTo(p.x,p.y);
+      ctx.lineTo(p.x-p.vx*5,p.y-p.vy*5);
+      ctx.stroke();
+      ctx.shadowBlur=0;
+      if(lr>0.3&&lr<0.7&&Math.random()<0.005){
+        ctx.fillStyle=`rgba(77,255,42,${alpha*0.5})`;
+        ctx.shadowColor='#4dff2a'; ctx.shadowBlur=6;
+        ctx.beginPath();
+        ctx.ellipse(p.x,p.y,p.size*2.5,p.size*0.8,Math.atan2(p.vy,p.vx),0,Math.PI*2);
+        ctx.fill(); ctx.shadowBlur=0;
+      }
+    } else {
+      ctx.strokeStyle=`rgba(68,120,255,${alpha*0.9})`;
+      ctx.shadowColor='#4477ff';
+      ctx.shadowBlur=speed>0.3?6:0;
+      ctx.lineWidth=0.8;
+      ctx.beginPath();
+      ctx.moveTo(p.x,p.y);
+      ctx.lineTo(p.x-p.vx*8,p.y-p.vy*8);
+      ctx.stroke();
+      ctx.shadowBlur=0;
+      if(Math.abs(p.vx)<0.08&&Math.abs(p.vy)<0.08){
+        ctx.fillStyle=`rgba(68,120,255,${alpha*0.6})`;
+        ctx.fillRect(p.x-0.8,p.y-0.8,1.6,1.6);
+      }
+    }
+  });
+
+  time+=0.007;
+  animFrame=requestAnimationFrame(drawFrame);
+}
+
+// ===================== CONSTELLATION =====================
+let conCtx, conW, conH;
+let conState = 'idle'; // idle | drawing | holding | fading
+let conStars = [];
+let conLines = [];
+let conProgress = 0;
+let conAlpha = 0;
+let conAnim;
+let conCrystalIdx_local = 0;
+
+function initConCanvas() {
+  const c = document.getElementById('constellationCanvas');
+  if (!c) return;
+  const zone = document.getElementById('crystalZone');
+  conW = c.width = zone.clientWidth || 340;
+  conH = c.height = 90;
+  conCtx = c.getContext('2d');
+}
+
+function drawConFrame() {
+  if (!conCtx) return;
+  conCtx.clearRect(0, 0, conW, conH);
+
+  if (conState === 'idle') {
+    // Scattered faint stars
+    drawIdleStars();
+    return;
+  }
+
+  if (conState === 'drawing' || conState === 'holding' || conState === 'fading') {
+    const alpha = conState === 'fading' ? conAlpha : 1;
+
+    // Draw stars
+    conStars.forEach((s, i) => {
+      const reveal = Math.min(1, (conProgress * conStars.length) - i);
+      if (reveal <= 0) return;
+      const a = reveal * alpha;
+      const grd = conCtx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r * 3);
+      grd.addColorStop(0, s.type === 'herb'
+        ? `rgba(77,255,42,${a})`
+        : `rgba(68,119,255,${a})`);
+      grd.addColorStop(1, 'transparent');
+      conCtx.fillStyle = grd;
+      conCtx.beginPath();
+      conCtx.arc(s.x, s.y, s.r * 3, 0, Math.PI * 2);
+      conCtx.fill();
+      conCtx.fillStyle = s.type === 'herb'
+        ? `rgba(220,255,200,${a})`
+        : `rgba(200,220,255,${a})`;
+      conCtx.beginPath();
+      conCtx.arc(s.x, s.y, s.r * 0.7, 0, Math.PI * 2);
+      conCtx.fill();
+    });
+
+    // Draw lines
+    const lineReveal = Math.max(0, conProgress * 2 - 0.6);
+    conLines.forEach((ln, i) => {
+      const lp = Math.min(1, lineReveal * conLines.length - i);
+      if (lp <= 0) return;
+      const s0 = conStars[ln[0]], s1 = conStars[ln[1]];
+      const mx = s0.x + (s1.x - s0.x) * lp;
+      const my = s0.y + (s1.y - s0.y) * lp;
+      conCtx.strokeStyle = `rgba(255,215,0,${0.35 * alpha})`;
+      conCtx.lineWidth = 0.6;
+      conCtx.shadowColor = '#ffd700';
+      conCtx.shadowBlur = 4;
+      conCtx.beginPath();
+      conCtx.moveTo(s0.x, s0.y);
+      conCtx.lineTo(mx, my);
+      conCtx.stroke();
+      conCtx.shadowBlur = 0;
+    });
+  }
+}
+
+function drawIdleStars() {
+  // Few very faint stars always visible
+  if (!conCtx) return;
+  const seed = [0.1,0.3,0.5,0.7,0.9,0.2,0.6,0.8];
+  seed.forEach((s, i) => {
+    const x = s * conW;
+    const y = (i % 3 + 1) / 4 * conH;
+    const r = 0.6 + (i % 3) * 0.3;
+    conCtx.fillStyle = i % 2 === 0 ? 'rgba(77,255,42,0.15)' : 'rgba(68,119,255,0.12)';
+    conCtx.beginPath();
+    conCtx.arc(x, y, r, 0, Math.PI * 2);
+    conCtx.fill();
+  });
+}
+
+function buildConstellation(crystalIdx) {
+  // Generate star positions — mix herb (green) and patent (blue) stars
+  const n = 6 + (crystalIdx % 3);
+  conStars = [];
+  const margin = 12;
+  for (let i = 0; i < n; i++) {
+    // Deterministic but varied positions per crystal
+    const seed1 = ((crystalIdx * 7 + i * 13) % 97) / 97;
+    const seed2 = ((crystalIdx * 11 + i * 17) % 89) / 89;
+    conStars.push({
+      x: margin + seed1 * (conW - margin * 2),
+      y: margin + seed2 * (conH - margin * 2),
+      r: 1.5 + (((crystalIdx + i) % 3)) * 0.8,
+      type: i % 3 === 0 ? 'patent' : 'herb'
+    });
+  }
+  // Build lines: connect stars in sequence + one cross
+  conLines = [];
+  for (let i = 0; i < conStars.length - 1; i++) {
+    conLines.push([i, i + 1]);
+  }
+  // Add one bridge between first and last
+  if (conStars.length > 3) conLines.push([0, conStars.length - 1]);
+}
+
+function animateConstellation(onDone) {
+  conState = 'drawing';
+  conProgress = 0;
+  conAlpha = 1;
+
+  const drawDuration = 1800;
+  const holdDuration = 2200;
+  const fadeDuration = 1200;
+  const start = performance.now();
+
+  function tick(now) {
+    const elapsed = now - start;
+    if (elapsed < drawDuration) {
+      conProgress = elapsed / drawDuration;
+      drawConFrame();
+      conAnim = requestAnimationFrame(tick);
+    } else if (elapsed < drawDuration + holdDuration) {
+      conProgress = 1;
+      conState = 'holding';
+      drawConFrame();
+      conAnim = requestAnimationFrame(tick);
+    } else if (elapsed < drawDuration + holdDuration + fadeDuration) {
+      conState = 'fading';
+      conProgress = 1;
+      conAlpha = 1 - (elapsed - drawDuration - holdDuration) / fadeDuration;
+      drawConFrame();
+      conAnim = requestAnimationFrame(tick);
+    } else {
+      conState = 'idle';
+      drawConFrame();
+      if (onDone) onDone();
+    }
+  }
+  conAnim = requestAnimationFrame(tick);
+}
+
+function crystallize() {
+  const btn = document.getElementById('crystallizeBtn');
+  const out = document.getElementById('crystalText');
+  const d = plantData[currentPlant];
+  if (!d) return;
+
+  btn.disabled = true;
+  out.style.opacity = '0';
+  statusEl.textContent = 'звёзды проявляются...';
+
+  if (!conCtx) initConCanvas();
+  cancelAnimationFrame(conAnim);
+  buildConstellation(crystalIdx);
+
+  animateConstellation(() => {
+    btn.disabled = false;
+    statusEl.textContent = 'поле активно';
+  });
+
+  // Show text after stars start appearing
+  setTimeout(() => {
+    const text = d.crystals[crystalIdx % d.crystals.length];
+    crystalIdx++;
+    out.textContent = text;
+    out.style.opacity = '1';
+    statusEl.textContent = 'созвездие проявлено';
+  }, 900);
+}
+
+// Sliders
+document.getElementById('herbSlider').addEventListener('input',function(){
+  herbWeight=parseInt(this.value);
+  document.getElementById('herbVal').textContent=this.value;
+});
+document.getElementById('patentSlider').addEventListener('input',function(){
+  patentWeight=parseInt(this.value);
+  document.getElementById('patentVal').textContent=this.value;
+});
+
+// Init
+window.addEventListener('resize',()=>{
+  cancelAnimationFrame(animFrame);
+  resize(); drawFrame();
+});
+resize();
+updateGrammarStats(plantData['ромашка'].grammar);
+statusEl.textContent='поле активно';
+drawFrame();
+setTimeout(() => { initConCanvas(); drawConFrame(); }, 100);
+</script>
+</body>
+</html>
